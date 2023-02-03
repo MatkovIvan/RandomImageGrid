@@ -11,9 +11,21 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.SubcomposeLayout
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
 import kotlin.math.roundToInt
 
+/**
+ * Infinite grid of fixed size tiles.
+ * Supports drag and scale.
+ *
+ * TODO: mouse wheel
+ * TODO: inertia
+ * TODO: animateScrollTo
+ * TODO: preload tiles around
+ */
 @Composable
 fun LazyInfiniteGrid(
     itemWidth: Dp,
@@ -36,7 +48,8 @@ fun LazyInfiniteGrid(
             val itemWidthPx = itemWidth.toPx().roundToInt()
             val itemHeightPx = itemHeight.toPx().roundToInt()
             tilesInBounds(visibleBounds, itemWidthPx, itemHeightPx).forEach {
-                subcompose(it) @Composable { itemContent(it) }.forEach { measurable ->
+                // Use tile coordinates as slotId to cache compose calls.
+                subcompose(slotId = it) @Composable { itemContent(it) }.forEach { measurable ->
                     val x = it.x * itemWidthPx - state.offset.x
                     val y = it.y * itemHeightPx - state.offset.y
                     measurable.measure(Constraints(
@@ -54,15 +67,18 @@ class LazyInfiniteGridState {
     private var _offset = mutableStateOf(Offset(0f, 0f))
     private var _scale = mutableStateOf(1.0f)
 
-    val offset get() = IntOffset(
-        _offset.value.x.roundToInt(),
-        _offset.value.y.roundToInt()
-    )
-    val scale get() = _scale.value
+    val offset
+        get() = IntOffset(
+            _offset.value.x.roundToInt(),
+            _offset.value.y.roundToInt()
+        )
+    val scale
+        get() = _scale.value
 
-    fun onTransformGestures(centroid: Offset, pan: Offset, zoom: Float, zoomLimit: ClosedFloatingPointRange<Float>) {
+    internal fun onTransformGestures(centroid: Offset, pan: Offset, zoom: Float, zoomLimit: ClosedFloatingPointRange<Float>) {
         _offset.value -= pan
 
+        // For natural zooming, the centroid of the gesture should affect point where zooming occurs.
         val newScale = (_scale.value * zoom).coerceIn(zoomLimit)
         val limitedZoom = newScale / _scale.value
         _offset.value += centroid - centroid / limitedZoom
