@@ -64,8 +64,8 @@ fun LazyInfiniteGrid(
 
 @Stable
 class LazyInfiniteGridState {
-    private var _offset = mutableStateOf(Offset(0f, 0f))
-    private var _scale = mutableStateOf(1.0f)
+    private val _offset = mutableStateOf(Offset(0f, 0f))
+    private val _scale = mutableStateOf(1.0f)
 
     val offset
         get() = IntOffset(
